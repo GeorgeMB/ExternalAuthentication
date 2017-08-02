@@ -12,13 +12,21 @@ using Microsoft.Extensions.Logging;
 using ExternalAuthentication.Data;
 using ExternalAuthentication.Models;
 using ExternalAuthentication.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ExternalAuthentication
 {
+    /// <summary>
+    /// https://docs.microsoft.com/en-gb/aspnet/core/security/authentication/social/index
+    /// </summary>
     public class Startup
     {
+        string _testSecret = null;
+
         public Startup(IHostingEnvironment env)
         {
+            
+
             var builder = new ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
@@ -47,11 +55,17 @@ namespace ExternalAuthentication
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 
-            services.AddMvc();
+            services.AddMvc(options =>
+            {
+                options.SslPort = 44338;
+                options.Filters.Add(new RequireHttpsAttribute());
+            });
 
             // Add application services.
             services.AddTransient<IEmailSender, AuthMessageSender>();
             services.AddTransient<ISmsSender, AuthMessageSender>();
+
+            _testSecret = Configuration["MySecret"];
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -76,6 +90,14 @@ namespace ExternalAuthentication
             app.UseIdentity();
 
             // Add external authentication middleware below. To configure them please see https://go.microsoft.com/fwlink/?LinkID=532715
+
+            //https://docs.microsoft.com/en-gb/aspnet/core/security/authentication/social/google-logins
+            app.UseGoogleAuthentication(new GoogleOptions()
+            {
+                ClientId = Configuration["Authentication:Google:ClientId"],
+                ClientSecret = Configuration["Authentication:Google:ClientSecret"]
+            });
+
 
             app.UseMvc(routes =>
             {
